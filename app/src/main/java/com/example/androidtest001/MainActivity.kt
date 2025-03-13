@@ -41,7 +41,6 @@ class MainActivity : ComponentActivity() {
     }
   }
 
-  //todo: add granted callback
   fun requestPermissions(perms: Array<String>, callback: (Map<String, Boolean>) -> Unit) {
     if (requestPermsCallback != null) return
     requestPermsCallback = callback
