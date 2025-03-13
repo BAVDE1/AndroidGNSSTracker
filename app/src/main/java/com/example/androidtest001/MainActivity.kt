@@ -1,6 +1,5 @@
 package com.example.androidtest001
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,30 +17,34 @@ import androidx.compose.ui.unit.dp
 import com.example.androidtest001.ui.theme.AndroidTest001Theme
 
 class MainActivity : ComponentActivity() {
+  private var requestPermsCallback: ((Map<String, Boolean>) -> Unit)? = null
   private val requestPermsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()
   ) { grantedResults: Map<String, Boolean> ->
-    for (permResult in grantedResults)
-    if (!permResult.value) {
-      println("REJECTED ${permResult.key}")
-    }
+    requestPermsCallback?.let { it(grantedResults) }
+    requestPermsCallback = null
   }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     setContent {
-      var gns: GnssHelper = GnssHelper(applicationContext, this)
+      Logger.setupLogger(this)
+      var gns: GnssHelper = GnssHelper(this)
 
       AndroidTest001Theme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-          var topPv = PaddingValues(top = innerPadding.calculateTopPadding())
+          val topPv = PaddingValues(top = innerPadding.calculateTopPadding())
           LogPointerEvents(topPv)
+          Logger.LoggingUnit()
         }
       }
     }
   }
 
-  fun requestPermissions(perms: Array<String>) {
+  //todo: add granted callback
+  fun requestPermissions(perms: Array<String>, callback: (Map<String, Boolean>) -> Unit) {
+    if (requestPermsCallback != null) return
+    requestPermsCallback = callback
     requestPermsLauncher.launch(perms)
   }
 }
