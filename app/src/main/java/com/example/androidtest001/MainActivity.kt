@@ -34,8 +34,9 @@ class MainActivity : ComponentActivity() {
       AndroidTest001Theme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           val topPv = PaddingValues(top = innerPadding.calculateTopPadding())
+          val bottomPv = PaddingValues(bottom = innerPadding.calculateBottomPadding())
           LogPointerEvents(topPv)
-          Logger.LoggingUnit()
+          Logger.LoggingUnit(bottomPv)
         }
       }
     }
