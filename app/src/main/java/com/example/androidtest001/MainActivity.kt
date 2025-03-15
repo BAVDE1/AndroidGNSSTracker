@@ -56,7 +56,6 @@ private fun LogPointerEvents(pv: PaddingValues) {
   Column {
     Text(log, Modifier.padding(pv))
     Row {
-      InteractionPress({ e: PointerInputChange -> log = "press ${e.position}" }, Modifier.size(100.dp).background(Color.Blue))
       InteractionRelease({ e: PointerInputChange -> log = "release ${e.position}" }, Modifier.size(100.dp).background(Color.Red))
     }
   }
