@@ -38,6 +38,21 @@ fun InteractionRelease(
   }
 }
 
+@Composable
+fun ToggleRelease(
+  onToggle: (Boolean, PointerInputChange) -> Unit,
+  modifier: Modifier = Modifier,
+  inner: (@Composable () -> Unit)? = null,
+  defaultVal: Boolean = false
+) {
+  var toggled: Boolean = defaultVal
+
+  InteractionRelease({ e: PointerInputChange ->
+    toggled = !toggled
+    onToggle(toggled, e);
+  }, modifier, inner)
+}
+
 
 /**
  * OUTDATED lol probably avoid using this anyway
