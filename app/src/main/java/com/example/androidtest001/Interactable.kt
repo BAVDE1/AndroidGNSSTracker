@@ -13,44 +13,52 @@ import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 
 
-/**
- * onRelease: function called on release
- * modifierOptions: optional modifiers
- * inner: function returning a unit to be used as the contents of the button
- */
-@Composable
-fun InteractionRelease(
-  onRelease: (PointerInputChange) -> Unit,
-  modifier: Modifier = Modifier,
-  inner: (@Composable () -> Unit)? = null
+class PressElement(
+  private val onRelease: (PointerInputChange) -> Unit,
 ) {
-  Box(Modifier.then(Modifier.pointerInput(onRelease) {
-    awaitEachGesture {
-      awaitFirstDown().also { it.consume() }
-      val up = waitForUpOrCancellation()
-      if (up != null) {
-        up.consume()
-        onRelease(up)
+  @Composable
+  fun Unit(
+    modifier: Modifier = Modifier,
+    inner: (@Composable () -> Unit)? = null
+  ) {
+    Box(Modifier.then(Modifier.pointerInput(onRelease) {
+      awaitEachGesture {
+        awaitFirstDown().also { it.consume() }
+        val up = waitForUpOrCancellation()
+        if (up != null) {
+          up.consume()
+          onRelease(up)
+        }
       }
+    }).then(modifier)) {
+      if (inner != null) inner()
     }
-  }).then(modifier)) {
-    if (inner != null) inner()
   }
 }
 
-@Composable
-fun ToggleRelease(
-  onToggle: (Boolean, PointerInputChange) -> Unit,
-  modifier: Modifier = Modifier,
-  inner: (@Composable () -> Unit)? = null,
+
+class ToggleElement(
+  private val onToggle: (Boolean) -> Unit,
   defaultVal: Boolean = false
 ) {
-  var toggled: Boolean = defaultVal
+  private val pressElem: PressElement = PressElement(onRelease = { toggle() })
+  private var toggled: Boolean = defaultVal
 
-  InteractionRelease({ e: PointerInputChange ->
+  /** silent: should this fire `onToggle` function */
+  fun toggle(silent: Boolean = false) {
     toggled = !toggled
-    onToggle(toggled, e);
-  }, modifier, inner)
+    if (!silent) onToggle(toggled)
+  }
+
+  @Composable
+  fun Unit(
+    modifier: Modifier = Modifier,
+    inner: (@Composable () -> Unit)? = null,
+  ) {
+    pressElem.Unit(modifier = modifier) {
+      if (inner != null) inner()
+    }
+  }
 }
 
 

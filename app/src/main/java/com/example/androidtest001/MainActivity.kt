@@ -35,7 +35,6 @@ class MainActivity : ComponentActivity() {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           val topPv = PaddingValues(top = innerPadding.calculateTopPadding())
           val bottomPv = PaddingValues(bottom = innerPadding.calculateBottomPadding())
-          LogPointerEvents(topPv)
           Logger.LoggingUnit(bottomPv)
         }
       }
@@ -46,17 +45,5 @@ class MainActivity : ComponentActivity() {
     if (requestPermsCallback != null) return
     requestPermsCallback = callback
     requestPermsLauncher.launch(perms)
-  }
-}
-
-@Composable
-private fun LogPointerEvents(pv: PaddingValues) {
-  var log by remember { mutableStateOf("---") }
-
-  Column {
-    Text(log, Modifier.padding(pv))
-    Row {
-      InteractionRelease({ e: PointerInputChange -> log = "release ${e.position}" }, Modifier.size(100.dp).background(Color.Red))
-    }
   }
 }

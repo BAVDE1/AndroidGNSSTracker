@@ -38,13 +38,14 @@ class LoggerSingleton {
   fun LoggingUnit(pv: PaddingValues) {
     val cornerShape: Shape = RoundedCornerShape(5.dp)
     val scrollState: ScrollState = rememberScrollState()
+    val toggle: ToggleElement = ToggleElement({ toggled: Boolean -> println("toggled: $toggled") })
 
-    val closeBtn: @Composable () -> Unit = {
-      InteractionRelease(
-      onRelease = { println("pressed") },
-      inner = { Box(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape)) {
-        Text(text = "X", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)}
-      })
+    val closeBtnUnit: @Composable () -> Unit = {
+      PressElement { println("pressed") }.Unit {
+        Box(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape)) {
+          Text(text = "X", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
+        }
+      }
     }
 
     Box(Modifier.fillMaxSize().padding(pv)) {
@@ -58,7 +59,10 @@ class LoggerSingleton {
           }
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(text = "[some toggles]", color = Color.Black)
-            closeBtn()
+            toggle.Unit {
+              Box(Modifier.size(40.dp).background(Color.Red))
+            }
+            closeBtnUnit()
           }
           Row(Modifier.verticalScroll(scrollState).horizontalScroll(scrollState).border(3.dp, DARK_GREY_001, cornerShape)
             .clip(cornerShape).fillMaxSize().background(DARK_GREY_003).weight(1f, true).padding(10.dp),
