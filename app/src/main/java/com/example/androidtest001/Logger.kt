@@ -31,7 +31,7 @@ enum class LogLevel {
 
 class LoggerSingleton {
   private val SHOW_DEBUG_DEFAULT = true
-  private val SNAP_TO_BTM_DEFAULT = false
+  private val SNAP_TO_BTM_DEFAULT = true
 
   private var initialized: Boolean = false
   private var activity: MainActivity? = null
@@ -40,9 +40,16 @@ class LoggerSingleton {
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
 
   private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
-  private val showDebugToggle = ToggleElement({ toggled: Boolean -> showDebug.value = toggled}, defaultVal = SHOW_DEBUG_DEFAULT)
+  private val showDebugToggle =
+    ToggleElement({ toggled: Boolean -> showDebug.value = toggled }, defaultVal = SHOW_DEBUG_DEFAULT)
 
-  private val snapToBtmToggle = ToggleElement({ toggled: Boolean -> info("toggled: $toggled") }, defaultVal = SNAP_TO_BTM_DEFAULT)
+  // lock (from toggling itself off again) while waiting for auto scroll to finish
+  private var snapToBtmLocked = SNAP_TO_BTM_DEFAULT
+  private val snapToBtm: MutableLiveData<Boolean> = MutableLiveData(SNAP_TO_BTM_DEFAULT)
+  private val snapToBtmToggle = ToggleElement({ toggled: Boolean ->
+    snapToBtmLocked = true
+    snapToBtm.value = toggled
+  }, defaultVal = SNAP_TO_BTM_DEFAULT)
 
   fun setupLogger(activity: MainActivity) {
     if (initialized) return
@@ -83,8 +90,22 @@ class LoggerSingleton {
     var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
     logs.observeForever { v: List<Log> -> logsObserved = v }
 
-    var showDebugObserved: Boolean by remember { mutableStateOf(false) }
+    var showDebugObserved: Boolean by remember { mutableStateOf(SHOW_DEBUG_DEFAULT) }
     showDebug.observeForever { v: Boolean -> showDebugObserved = v }
+
+    var snapToBtmObserved: Boolean by remember { mutableStateOf(SNAP_TO_BTM_DEFAULT) }
+    snapToBtm.observeForever { v: Boolean -> snapToBtmObserved = v }
+
+    // auto scroll
+    if (snapToBtm.value!!) LaunchedEffect(logsObserved.size) {
+      scrollState.scrollTo(scrollState.maxValue)
+      snapToBtmLocked = false  // unlock!
+    }
+
+    // manual scroll listener
+    if (snapToBtmObserved && !snapToBtmLocked && scrollState.value < scrollState.maxValue) {
+      snapToBtmToggle.toggle(value = false)
+    }
 
     val snapToBtnUnit: @Composable () -> Unit = {
       snapToBtmToggle.Unit { toggled: Boolean ->
@@ -134,10 +155,12 @@ class LoggerSingleton {
             Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.Bottom) {
               for (log: Log in logsObserved) {
                 if (showDebugObserved || log.logLevel != LogLevel.DEBUG) {
-                  Text("[${log.getFormattedTime()}] ${log.msg}",
+                  Text(
+                    "[${log.getFormattedTime()}] ${log.msg}",
                     fontFamily = FontFamily.Monospace,
                     color = log.getColor(),
-                    style = TextStyle(textIndent = TextIndent(0.sp, 20.sp)))
+                    style = TextStyle(textIndent = TextIndent(0.sp, 20.sp))
+                  )
                 }
               }
             }

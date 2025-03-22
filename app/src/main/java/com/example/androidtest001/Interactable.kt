@@ -54,8 +54,9 @@ class ToggleElement(
   private var toggled: MutableLiveData<Boolean> = MutableLiveData(defaultVal)
 
   /** silent: should this fire `onToggle` function */
-  fun toggle(silent: Boolean = false) {
-    toggled.value = !toggled.value!!
+  fun toggle(value: Boolean? = null, silent: Boolean = false) {
+    if (value != null) toggled.value = value
+    else toggled.value = !toggled.value!!
     if (!silent) onToggle(toggled.value!!)
   }
 
