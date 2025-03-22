@@ -1,17 +1,27 @@
 package com.example.androidtest001
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.lifecycle.LiveData
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
+import com.example.androidtest001.ui.theme.DARK_GREY_001
+import com.example.androidtest001.ui.theme.DARK_GREY_003
+import com.example.androidtest001.ui.theme.WHITE
 
 
 class PressElement(
@@ -55,9 +65,20 @@ class ToggleElement(
     inner: (@Composable (Boolean) -> Unit),
   ) {
     pressElem.Unit(modifier = modifier) {
-      var isToggled by remember { mutableStateOf(false) }
-      toggled.observeForever { v: Boolean -> isToggled = v }
-      inner(isToggled)
+      var toggledObserved by remember { mutableStateOf(false) }  // default value doesn't even matter here
+      toggled.observeForever { v: Boolean -> toggledObserved = v }
+      inner(toggledObserved)
+    }
+  }
+}
+
+
+@Composable
+fun toggleElementDefaultInner(toggled: Boolean) {
+  val cornerShape: Shape = RoundedCornerShape(5.dp)
+  Column(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+    if (toggled) {
+      Box(Modifier.clip(cornerShape).size(10.dp).background(WHITE))
     }
   }
 }

@@ -4,25 +4,45 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.MutableLiveData
 import com.example.androidtest001.ui.theme.*
+import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.*
 
 val Logger: LoggerSingleton = LoggerSingleton()
 
+enum class LogLevel {
+  DEBUG, INFO, WARN, DANGER
+}
+
 class LoggerSingleton {
+  private val SHOW_DEBUG_DEFAULT = true
+  private val SNAP_TO_BTM_DEFAULT = false
+
   private var initialized: Boolean = false
   private var activity: MainActivity? = null
-
   private var height: Dp = 400.dp
+
+  private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
+
+  private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
+  private val showDebugToggle = ToggleElement({ toggled: Boolean -> showDebug.value = toggled}, defaultVal = SHOW_DEBUG_DEFAULT)
+
+  private val snapToBtmToggle = ToggleElement({ toggled: Boolean -> info("toggled: $toggled") }, defaultVal = SNAP_TO_BTM_DEFAULT)
 
   fun setupLogger(activity: MainActivity) {
     if (initialized) return
@@ -34,14 +54,58 @@ class LoggerSingleton {
     return initialized
   }
 
+  fun pushLog(level: LogLevel, msg: String) {
+    val newLog = Log(logLevel = level, msg)
+    logs.value = listOf(*logs.value!!.toTypedArray(), newLog)
+  }
+
+  fun debug(msg: String) {
+    pushLog(LogLevel.DEBUG, msg)
+  }
+
+  fun info(msg: String) {
+    pushLog(LogLevel.INFO, msg)
+  }
+
+  fun warn(msg: String) {
+    pushLog(LogLevel.WARN, msg)
+  }
+
+  fun danger(msg: String) {
+    pushLog(LogLevel.DANGER, msg)
+  }
+
   @Composable
   fun LoggingUnit(pv: PaddingValues) {
     val cornerShape: Shape = RoundedCornerShape(5.dp)
     val scrollState: ScrollState = rememberScrollState()
-    val toggle = ToggleElement({ toggled: Boolean -> println("toggled: $toggled") }, defaultVal = true)
+
+    var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
+    logs.observeForever { v: List<Log> -> logsObserved = v }
+
+    var showDebugObserved: Boolean by remember { mutableStateOf(false) }
+    showDebug.observeForever { v: Boolean -> showDebugObserved = v }
+
+    val snapToBtnUnit: @Composable () -> Unit = {
+      snapToBtmToggle.Unit { toggled: Boolean ->
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+          toggleElementDefaultInner(toggled = toggled)
+          Text("snap to btm", color = BLACK)
+        }
+      }
+    }
+
+    val showDebugUnit: @Composable () -> Unit = {
+      showDebugToggle.Unit { toggled: Boolean ->
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+          toggleElementDefaultInner(toggled = toggled)
+          Text("show debug", color = BLACK)
+        }
+      }
+    }
 
     val closeBtnUnit: @Composable () -> Unit = {
-      PressElement { println("pressed") }.Unit {
+      PressElement { debug("really long message really long message really long message really long message") }.Unit {
         Box(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape)) {
           Text(text = "X", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
         }
@@ -58,29 +122,47 @@ class LoggerSingleton {
             Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
           }
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            toggle.Unit { toggled: Boolean ->
-              if (toggled) {
-                Box(Modifier.size(40.dp).background(Color.Red))
-              } else {
-                Box(Modifier.size(40.dp).background(Color.Blue))
-              }
-              Text("one")
-            }
+            snapToBtnUnit()
+            showDebugUnit()
             closeBtnUnit()
           }
-          Row(Modifier.fillMaxWidth().verticalScroll(scrollState).horizontalScroll(scrollState).border(3.dp, DARK_GREY_001, cornerShape)
-            .clip(cornerShape).background(DARK_GREY_003).weight(1f, true).padding(10.dp),
-            verticalAlignment = Alignment.Bottom) {
+          Row(
+            Modifier.fillMaxWidth().verticalScroll(scrollState).border(3.dp, DARK_GREY_003, cornerShape)
+              .clip(cornerShape).background(DARK_GREEN).weight(1f, true).padding(10.dp),
+            verticalAlignment = Alignment.Bottom
+          ) {
             Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.Bottom) {
-              Text(text = "1")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2222")
+              for (log: Log in logsObserved) {
+                if (showDebugObserved || log.logLevel != LogLevel.DEBUG) {
+                  Text("[${log.getFormattedTime()}] ${log.msg}",
+                    fontFamily = FontFamily.Monospace,
+                    color = log.getColor(),
+                    style = TextStyle(textIndent = TextIndent(0.sp, 20.sp)))
+                }
+              }
             }
           }
         }
       }
+    }
+  }
+}
+
+class Log(val logLevel: LogLevel, val msg: String) {
+  var epochTime: Long = Instant.now().epochSecond
+
+  fun getFormattedTime(): String {
+    val sdf = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
+    val netDate = Date(epochTime * 1000)
+    return sdf.format(netDate)
+  }
+
+  fun getColor(): Color {
+    return when (logLevel) {
+      LogLevel.DEBUG -> GREY
+      LogLevel.INFO -> WHITE
+      LogLevel.WARN -> YELLOW
+      LogLevel.DANGER -> RED
     }
   }
 }
