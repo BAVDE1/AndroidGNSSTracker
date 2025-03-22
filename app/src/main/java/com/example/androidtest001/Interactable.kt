@@ -48,10 +48,10 @@ class PressElement(
 
 class ToggleElement(
   private val onToggle: (Boolean) -> Unit,
-  defaultVal: Boolean = false
+  default: Boolean = false
 ) {
   private val pressElem: PressElement = PressElement(onRelease = { toggle() })
-  private var toggled: MutableLiveData<Boolean> = MutableLiveData(defaultVal)
+  private var toggled: MutableLiveData<Boolean> = MutableLiveData(default)
 
   /** silent: should this fire `onToggle` function */
   fun toggle(value: Boolean? = null, silent: Boolean = false) {

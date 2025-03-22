@@ -10,6 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +32,7 @@ enum class LogLevel {
 }
 
 class LoggerSingleton {
+  private val SHOW_MORE_DEFAULT = false
   private val SHOW_DEBUG_DEFAULT = true
   private val SNAP_TO_BTM_DEFAULT = true
 
@@ -39,17 +42,22 @@ class LoggerSingleton {
 
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
 
+  private val showMore: MutableLiveData<Boolean> = MutableLiveData(SHOW_MORE_DEFAULT)
+  private val showMoreToggle = ToggleElement({ toggled: Boolean -> showMore.value = toggled}, default = SHOW_MORE_DEFAULT)
+
   private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
   private val showDebugToggle =
-    ToggleElement({ toggled: Boolean -> showDebug.value = toggled }, defaultVal = SHOW_DEBUG_DEFAULT)
+    ToggleElement({ toggled: Boolean -> showDebug.value = toggled }, default = SHOW_DEBUG_DEFAULT)
 
   // lock (from toggling itself off again) while waiting for auto scroll to finish
   private var snapToBtmLocked = SNAP_TO_BTM_DEFAULT
   private val snapToBtm: MutableLiveData<Boolean> = MutableLiveData(SNAP_TO_BTM_DEFAULT)
   private val snapToBtmToggle = ToggleElement({ toggled: Boolean ->
-    snapToBtmLocked = true
+    if (toggled) snapToBtmLocked = true
     snapToBtm.value = toggled
-  }, defaultVal = SNAP_TO_BTM_DEFAULT)
+  }, default = SNAP_TO_BTM_DEFAULT)
+
+  private var randomLogBtn = PressElement({ _: PointerInputChange -> info(listOf("a log", "something", "another thing", "omba", "eeeeee").random())})
 
   fun setupLogger(activity: MainActivity) {
     if (initialized) return
@@ -90,21 +98,34 @@ class LoggerSingleton {
     var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
     logs.observeForever { v: List<Log> -> logsObserved = v }
 
+    var showMoreObserved: Boolean by remember { mutableStateOf(SHOW_MORE_DEFAULT) }
+    showMore.observeForever { v: Boolean -> showMoreObserved = v }
+
     var showDebugObserved: Boolean by remember { mutableStateOf(SHOW_DEBUG_DEFAULT) }
     showDebug.observeForever { v: Boolean -> showDebugObserved = v }
 
     var snapToBtmObserved: Boolean by remember { mutableStateOf(SNAP_TO_BTM_DEFAULT) }
     snapToBtm.observeForever { v: Boolean -> snapToBtmObserved = v }
 
-    // auto scroll
-    if (snapToBtm.value!!) LaunchedEffect(logsObserved.size) {
+    // auto scroll (asynchronous)
+    if (snapToBtm.value!!) LaunchedEffect(logsObserved.size, showMoreObserved, showDebugObserved) {
       scrollState.scrollTo(scrollState.maxValue)
       snapToBtmLocked = false  // unlock!
     }
 
-    // manual scroll listener
-    if (snapToBtmObserved && !snapToBtmLocked && scrollState.value < scrollState.maxValue) {
+    // manual scroll listener (conditional order is important)
+    if (snapToBtmObserved && scrollState.value < scrollState.maxValue && !snapToBtmLocked) {
       snapToBtmToggle.toggle(value = false)
+    }
+
+    val showMoreUnit: @Composable () -> Unit = {
+      showMoreToggle.Unit { toggled: Boolean ->
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+          Column(Modifier.size(25.dp).clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(if (toggled) "v" else ">", color = BLACK)
+          }
+        }
+      }
     }
 
     val snapToBtnUnit: @Composable () -> Unit = {
@@ -121,6 +142,14 @@ class LoggerSingleton {
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
           toggleElementDefaultInner(toggled = toggled)
           Text("show debug", color = BLACK)
+        }
+      }
+    }
+
+    val randomLogUnit: @Composable () -> Unit = {
+      randomLogBtn.Unit {
+        Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
+          Text("rand log", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
         }
       }
     }
@@ -143,9 +172,18 @@ class LoggerSingleton {
             Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
           }
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            showMoreUnit()
             snapToBtnUnit()
-            showDebugUnit()
             closeBtnUnit()
+          }
+          if (showMoreObserved) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+              Box(Modifier.fillMaxWidth().height(5.dp).background(LIGHT_GREY_006))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+              showDebugUnit()
+              randomLogUnit()
+            }
           }
           Row(
             Modifier.fillMaxWidth().verticalScroll(scrollState).border(3.dp, DARK_GREY_003, cornerShape)
@@ -172,7 +210,7 @@ class LoggerSingleton {
 }
 
 class Log(val logLevel: LogLevel, val msg: String) {
-  var epochTime: Long = Instant.now().epochSecond
+  private var epochTime: Long = Instant.now().epochSecond
 
   fun getFormattedTime(): String {
     val sdf = SimpleDateFormat("HH:mm:ss", Locale.ENGLISH)
