@@ -38,7 +38,7 @@ class LoggerSingleton {
   fun LoggingUnit(pv: PaddingValues) {
     val cornerShape: Shape = RoundedCornerShape(5.dp)
     val scrollState: ScrollState = rememberScrollState()
-    val toggle: ToggleElement = ToggleElement({ toggled: Boolean -> println("toggled: $toggled") })
+    val toggle = ToggleElement({ toggled: Boolean -> println("toggled: $toggled") }, defaultVal = true)
 
     val closeBtnUnit: @Composable () -> Unit = {
       PressElement { println("pressed") }.Unit {
@@ -53,36 +53,26 @@ class LoggerSingleton {
         modifier = Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_008)
           .fillMaxWidth().height(height).padding(top = 5.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
       ) {
-        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            Box(Modifier.clip(cornerShape).size(300.dp, 10.dp).background(DARK_GREY_001))
+            Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
           }
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(text = "[some toggles]", color = Color.Black)
-            toggle.Unit {
-              Box(Modifier.size(40.dp).background(Color.Red))
+            toggle.Unit { toggled: Boolean ->
+              if (toggled) {
+                Box(Modifier.size(40.dp).background(Color.Red))
+              } else {
+                Box(Modifier.size(40.dp).background(Color.Blue))
+              }
+              Text("one")
             }
             closeBtnUnit()
           }
-          Row(Modifier.verticalScroll(scrollState).horizontalScroll(scrollState).border(3.dp, DARK_GREY_001, cornerShape)
-            .clip(cornerShape).fillMaxSize().background(DARK_GREY_003).weight(1f, true).padding(10.dp),
+          Row(Modifier.fillMaxWidth().verticalScroll(scrollState).horizontalScroll(scrollState).border(3.dp, DARK_GREY_001, cornerShape)
+            .clip(cornerShape).background(DARK_GREY_003).weight(1f, true).padding(10.dp),
             verticalAlignment = Alignment.Bottom) {
-            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Bottom) {
+            Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.Bottom) {
               Text(text = "1")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
-              Text(text = "2")
               Text(text = "2")
               Text(text = "2")
               Text(text = "2")

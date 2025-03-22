@@ -4,13 +4,14 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ComposableInferredTarget
-import androidx.compose.runtime.ComposableTarget
-import androidx.compose.runtime.InternalComposeApi
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 
 
 class PressElement(
@@ -19,7 +20,7 @@ class PressElement(
   @Composable
   fun Unit(
     modifier: Modifier = Modifier,
-    inner: (@Composable () -> Unit)? = null
+    inner: (@Composable () -> Unit)
   ) {
     Box(Modifier.then(Modifier.pointerInput(onRelease) {
       awaitEachGesture {
@@ -30,9 +31,7 @@ class PressElement(
           onRelease(up)
         }
       }
-    }).then(modifier)) {
-      if (inner != null) inner()
-    }
+    }).then(modifier)) { inner() }
   }
 }
 
@@ -42,21 +41,23 @@ class ToggleElement(
   defaultVal: Boolean = false
 ) {
   private val pressElem: PressElement = PressElement(onRelease = { toggle() })
-  private var toggled: Boolean = defaultVal
+  private var toggled: MutableLiveData<Boolean> = MutableLiveData(defaultVal)
 
   /** silent: should this fire `onToggle` function */
   fun toggle(silent: Boolean = false) {
-    toggled = !toggled
-    if (!silent) onToggle(toggled)
+    toggled.value = !toggled.value!!
+    if (!silent) onToggle(toggled.value!!)
   }
 
   @Composable
   fun Unit(
     modifier: Modifier = Modifier,
-    inner: (@Composable () -> Unit)? = null,
+    inner: (@Composable (Boolean) -> Unit),
   ) {
     pressElem.Unit(modifier = modifier) {
-      if (inner != null) inner()
+      var isToggled by remember { mutableStateOf(false) }
+      toggled.observeForever { v: Boolean -> isToggled = v }
+      inner(isToggled)
     }
   }
 }
