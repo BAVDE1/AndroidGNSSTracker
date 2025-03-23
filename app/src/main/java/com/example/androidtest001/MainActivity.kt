@@ -60,7 +60,7 @@ private fun LogPointerEvents(filter: PointerEventType? = null) {
       Modifier
         .size(100.dp)
         .background(Color.Red)
-        .pointerInput(filter) {
+        .pointerInput(PointerEventType.Press, PointerEventType.Move, PointerEventType.Release) {
           awaitPointerEventScope {
             while (true) {
               val event = awaitPointerEvent()

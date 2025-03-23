@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.text.TextStyle
@@ -24,6 +25,7 @@ import com.example.androidtest001.ui.theme.*
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
+import kotlin.math.min
 
 val Logger: LoggerSingleton = LoggerSingleton()
 
@@ -43,7 +45,8 @@ class LoggerSingleton {
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
 
   private val showMore: MutableLiveData<Boolean> = MutableLiveData(SHOW_MORE_DEFAULT)
-  private val showMoreToggle = ToggleElement({ toggled: Boolean -> showMore.value = toggled}, default = SHOW_MORE_DEFAULT)
+  private val showMoreToggle =
+    ToggleElement({ toggled: Boolean -> showMore.value = toggled }, default = SHOW_MORE_DEFAULT)
 
   private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
   private val showDebugToggle =
@@ -57,7 +60,26 @@ class LoggerSingleton {
     snapToBtm.value = toggled
   }, default = SNAP_TO_BTM_DEFAULT)
 
-  private var randomLogBtn = PressElement({ _: PointerInputChange -> info(listOf("a log", "something", "another thing", "omba", "eeeeee").random())})
+  private val heightDrag = DragElement({ e: PointerEvent ->
+    val change: PointerInputChange = e.changes.first()
+    val delta = (change.previousPosition.y - change.position.y) * .5f
+    var newHeight = height.value + delta
+    newHeight = Math.max(200f, Math.min(800f, newHeight))
+    height = Dp(newHeight)
+    info(height)
+  })
+
+  private val randomLogBtn = PressElement({ _: PointerInputChange ->
+    info(
+      listOf(
+        "a log",
+        "something",
+        "another thing",
+        "omba",
+        "eeeeee"
+      ).random()
+    )
+  })
 
   fun setupLogger(activity: MainActivity) {
     if (initialized) return
@@ -74,20 +96,20 @@ class LoggerSingleton {
     logs.value = listOf(*logs.value!!.toTypedArray(), newLog)
   }
 
-  fun debug(msg: String) {
-    pushLog(LogLevel.DEBUG, msg)
+  fun debug(msg: Any) {
+    pushLog(LogLevel.DEBUG, msg.toString())
   }
 
-  fun info(msg: String) {
-    pushLog(LogLevel.INFO, msg)
+  fun info(msg: Any) {
+    pushLog(LogLevel.INFO, msg.toString())
   }
 
-  fun warn(msg: String) {
-    pushLog(LogLevel.WARN, msg)
+  fun warn(msg: Any) {
+    pushLog(LogLevel.WARN, msg.toString())
   }
 
-  fun danger(msg: String) {
-    pushLog(LogLevel.DANGER, msg)
+  fun danger(msg: Any) {
+    pushLog(LogLevel.DANGER, msg.toString())
   }
 
   @Composable
@@ -121,7 +143,11 @@ class LoggerSingleton {
     val showMoreUnit: @Composable () -> Unit = {
       showMoreToggle.Unit { toggled: Boolean ->
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-          Column(Modifier.size(25.dp).clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+          Column(
+            Modifier.size(25.dp).clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
             Text(if (toggled) "v" else ">", color = BLACK)
           }
         }
@@ -155,21 +181,31 @@ class LoggerSingleton {
     }
 
     val closeBtnUnit: @Composable () -> Unit = {
-      PressElement { debug("really long message really long message really long message really long message") }.Unit {
+      PressElement { debug("really long message really long message really long") }.Unit {
         Box(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape)) {
           Text(text = "X", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
         }
       }
     }
 
+    val clearLogsUnit: @Composable () -> Unit = {
+      PressElement { _: PointerInputChange -> logs.value = listOf() }.Unit {
+        Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
+          Text("clear logs", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
+        }
+      }
+    }
+
     Box(Modifier.fillMaxSize().padding(pv)) {
       Box(
-        modifier = Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_008)
+        modifier = Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_007)
           .fillMaxWidth().height(height).padding(top = 5.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
       ) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-            Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
+          heightDrag.Unit {
+            Row(Modifier.fillMaxWidth().padding(bottom = 5.dp), horizontalArrangement = Arrangement.Center) {
+              Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
+            }
           }
           Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             showMoreUnit()
@@ -178,11 +214,15 @@ class LoggerSingleton {
           }
           if (showMoreObserved) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-              Box(Modifier.fillMaxWidth().height(5.dp).background(LIGHT_GREY_006))
+              Box(Modifier.fillMaxWidth().height(5.dp).background(GREY))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
               showDebugUnit()
               randomLogUnit()
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+              Text("logs: ${logsObserved.size}", color = BLACK)
+              clearLogsUnit()
             }
           }
           Row(

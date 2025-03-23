@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.PointerEvent
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
@@ -73,11 +75,42 @@ class ToggleElement(
   }
 }
 
+class DragElement(
+  private val onDrag: (PointerEvent) -> Unit,
+  private val onDown: ((PointerEvent) -> Unit)? = null,
+  private val onRelease: ((PointerEvent) -> Unit)? = null,
+) {
+  @Composable
+  fun Unit(
+    modifier: Modifier = Modifier,
+    inner: (@Composable () -> Unit)
+  ) {
+    Box(Modifier.then(Modifier.pointerInput(PointerEventType.Press, PointerEventType.Move, PointerEventType.Release) {
+      awaitPointerEventScope {
+        while (true) {
+          val event = awaitPointerEvent()
+
+          // event.changes.first().position
+          when (event.type) {
+            PointerEventType.Press -> onDown?.let { it(event) }
+            PointerEventType.Release -> onRelease?.let { it(event) }
+            PointerEventType.Move -> onDrag(event)
+          }
+        }
+      }
+    }).then(modifier)) { inner() }
+  }
+}
+
 
 @Composable
 fun toggleElementDefaultInner(toggled: Boolean) {
   val cornerShape: Shape = RoundedCornerShape(5.dp)
-  Column(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+  Column(
+    Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape),
+    verticalArrangement = Arrangement.Center,
+    horizontalAlignment = Alignment.CenterHorizontally
+  ) {
     if (toggled) {
       Box(Modifier.clip(cornerShape).size(10.dp).background(WHITE))
     }
