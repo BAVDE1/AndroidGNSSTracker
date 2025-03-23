@@ -1,4 +1,4 @@
-package com.example.androidtest001
+package com.example.androidtest001.classes
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

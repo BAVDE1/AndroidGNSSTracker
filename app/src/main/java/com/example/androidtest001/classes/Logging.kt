@@ -1,4 +1,4 @@
-package com.example.androidtest001
+package com.example.androidtest001.classes
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.MutableLiveData
+import com.example.androidtest001.*
 import com.example.androidtest001.ui.theme.*
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -34,7 +35,7 @@ enum class LogLevel {
 }
 
 class LoggerSingleton {
-  private val OPEN_DEFAULT = true
+  private val OPEN_DEFAULT = false
   private val SHOW_MORE_DEFAULT = false
   private val SHOW_DEBUG_DEFAULT = true
   private val SNAP_TO_BTM_DEFAULT = true
@@ -43,27 +44,30 @@ class LoggerSingleton {
   private var initialized: Boolean = false
   private var activity: MainActivity? = null
 
+  // live values
   private var isOpen: MutableLiveData<Boolean> = MutableLiveData(OPEN_DEFAULT)
-
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
-
+  private var height: MutableLiveData<Dp> = MutableLiveData(HEIGHT_DEFAULT)
   private val showMore: MutableLiveData<Boolean> = MutableLiveData(SHOW_MORE_DEFAULT)
+  private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
+  private val snapToBtm: MutableLiveData<Boolean> = MutableLiveData(SNAP_TO_BTM_DEFAULT)
+
+  // events
+  var onVisibilityChanged: ((Boolean) -> Unit)? = null
+
+  // interactable
   private val showMoreToggle =
     ToggleElement({ toggled: Boolean -> showMore.value = toggled }, default = SHOW_MORE_DEFAULT)
-
-  private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
   private val showDebugToggle =
     ToggleElement({ toggled: Boolean -> showDebug.value = toggled }, default = SHOW_DEBUG_DEFAULT)
 
   // lock (from toggling itself off again) while waiting for auto scroll to finish
   private var snapToBtmLocked = SNAP_TO_BTM_DEFAULT
-  private val snapToBtm: MutableLiveData<Boolean> = MutableLiveData(SNAP_TO_BTM_DEFAULT)
   private val snapToBtmToggle = ToggleElement({ toggled: Boolean ->
     if (toggled) snapToBtmLocked = true
     snapToBtm.value = toggled
   }, default = SNAP_TO_BTM_DEFAULT)
 
-  private var height: MutableLiveData<Dp> = MutableLiveData(HEIGHT_DEFAULT)
   private val heightDrag = DragElement({ e: PointerEvent ->
     val change: PointerInputChange = e.changes.first()
     val delta = (change.previousPosition.y - change.position.y) * .5f  // TODO: this is incorrect & wonky
@@ -72,7 +76,7 @@ class LoggerSingleton {
     height.value = Dp(newHeight)
   })
 
-  private val randomLogBtn = PressElement({ _: PointerInputChange ->
+  private val randomLogBtn = PressElement({
     info(
       listOf(
         "a log",
@@ -88,6 +92,7 @@ class LoggerSingleton {
     if (initialized) return
     this.activity = activity
     initialized = true
+    debug("Logger initialized (activity: $activity)")
   }
 
   fun isInitialized(): Boolean {
@@ -115,18 +120,23 @@ class LoggerSingleton {
     pushLog(LogLevel.DANGER, msg.toString())
   }
 
+  fun toggleVisibility(value: Boolean) {
+    isOpen.value = value
+    onVisibilityChanged?.let { it(isOpen.value!!) }
+  }
+
   @Composable
-  fun LoggingUnit(pv: PaddingValues) {
+  fun Unit(pv: PaddingValues) {
     val cornerShape: Shape = RoundedCornerShape(5.dp)
     val scrollState: ScrollState = rememberScrollState()
 
-    var isOpenObserved: Boolean by remember { mutableStateOf(OPEN_DEFAULT)}
+    var isOpenObserved: Boolean by remember { mutableStateOf(OPEN_DEFAULT) }
     isOpen.observeForever { v: Boolean -> isOpenObserved = v }
 
     var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
     logs.observeForever { v: List<Log> -> logsObserved = v }
 
-    var heightObserved: Dp by remember { mutableStateOf(HEIGHT_DEFAULT)}
+    var heightObserved: Dp by remember { mutableStateOf(HEIGHT_DEFAULT) }
     height.observeForever { v: Dp -> heightObserved = v }
 
     var showMoreObserved: Boolean by remember { mutableStateOf(SHOW_MORE_DEFAULT) }
@@ -190,7 +200,7 @@ class LoggerSingleton {
     }
 
     val closeBtnUnit: @Composable () -> Unit = {
-      PressElement { isOpen.value = false }.Unit {
+      PressElement { toggleVisibility(false) }.Unit {
         Box(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape)) {
           Text(text = "X", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
         }
@@ -198,7 +208,7 @@ class LoggerSingleton {
     }
 
     val clearLogsUnit: @Composable () -> Unit = {
-      PressElement { _: PointerInputChange -> logs.value = listOf() }.Unit {
+      PressElement { logs.value = listOf() }.Unit {
         Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
           Text("clear logs", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
         }
@@ -206,7 +216,7 @@ class LoggerSingleton {
     }
 
     val sliceLogsUnit: @Composable () -> Unit = {
-      PressElement { _: PointerInputChange ->
+      PressElement {
         logs.value = logs.value!!.subList(floor(logs.value!!.size * .5).toInt(), logs.value!!.size)
       }.Unit {
         Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
@@ -270,9 +280,14 @@ class LoggerSingleton {
         Box(
           modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)
         ) {
-          PressElement { _: PointerInputChange -> isOpen.value = true }.Unit {
+          PressElement { toggleVisibility(true) }.Unit {
             Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
-              Text("logs (${logs.value!!.size})", color = BLACK, modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Bold)
+              Text(
+                "logs (${logs.value!!.size})",
+                color = BLACK,
+                modifier = Modifier.padding(10.dp),
+                fontWeight = FontWeight.Bold
+              )
             }
           }
         }
