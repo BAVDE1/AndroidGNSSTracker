@@ -11,10 +11,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerEvent
-import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Dp
@@ -25,7 +25,7 @@ import com.example.androidtest001.ui.theme.*
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.util.*
-import kotlin.math.min
+import kotlin.math.floor
 
 val Logger: LoggerSingleton = LoggerSingleton()
 
@@ -34,13 +34,16 @@ enum class LogLevel {
 }
 
 class LoggerSingleton {
+  private val OPEN_DEFAULT = true
   private val SHOW_MORE_DEFAULT = false
   private val SHOW_DEBUG_DEFAULT = true
   private val SNAP_TO_BTM_DEFAULT = true
+  private val HEIGHT_DEFAULT = 400.dp
 
   private var initialized: Boolean = false
   private var activity: MainActivity? = null
-  private var height: Dp = 400.dp
+
+  private var isOpen: MutableLiveData<Boolean> = MutableLiveData(OPEN_DEFAULT)
 
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
 
@@ -60,13 +63,13 @@ class LoggerSingleton {
     snapToBtm.value = toggled
   }, default = SNAP_TO_BTM_DEFAULT)
 
+  private var height: MutableLiveData<Dp> = MutableLiveData(HEIGHT_DEFAULT)
   private val heightDrag = DragElement({ e: PointerEvent ->
     val change: PointerInputChange = e.changes.first()
-    val delta = (change.previousPosition.y - change.position.y) * .5f
-    var newHeight = height.value + delta
-    newHeight = Math.max(200f, Math.min(800f, newHeight))
-    height = Dp(newHeight)
-    info(height)
+    val delta = (change.previousPosition.y - change.position.y) * .5f  // TODO: this is incorrect & wonky
+    var newHeight = height.value!!.value + delta
+    newHeight = 200f.coerceAtLeast(800f.coerceAtMost(newHeight))
+    height.value = Dp(newHeight)
   })
 
   private val randomLogBtn = PressElement({ _: PointerInputChange ->
@@ -117,8 +120,14 @@ class LoggerSingleton {
     val cornerShape: Shape = RoundedCornerShape(5.dp)
     val scrollState: ScrollState = rememberScrollState()
 
+    var isOpenObserved: Boolean by remember { mutableStateOf(OPEN_DEFAULT)}
+    isOpen.observeForever { v: Boolean -> isOpenObserved = v }
+
     var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
     logs.observeForever { v: List<Log> -> logsObserved = v }
+
+    var heightObserved: Dp by remember { mutableStateOf(HEIGHT_DEFAULT)}
+    height.observeForever { v: Dp -> heightObserved = v }
 
     var showMoreObserved: Boolean by remember { mutableStateOf(SHOW_MORE_DEFAULT) }
     showMore.observeForever { v: Boolean -> showMoreObserved = v }
@@ -181,7 +190,7 @@ class LoggerSingleton {
     }
 
     val closeBtnUnit: @Composable () -> Unit = {
-      PressElement { debug("really long message really long message really long") }.Unit {
+      PressElement { isOpen.value = false }.Unit {
         Box(Modifier.size(25.dp).clip(cornerShape).background(DARK_GREY_003).border(3.dp, DARK_GREY_001, cornerShape)) {
           Text(text = "X", modifier = Modifier.fillMaxSize(), textAlign = TextAlign.Center)
         }
@@ -196,51 +205,74 @@ class LoggerSingleton {
       }
     }
 
+    val sliceLogsUnit: @Composable () -> Unit = {
+      PressElement { _: PointerInputChange ->
+        logs.value = logs.value!!.subList(floor(logs.value!!.size * .5).toInt(), logs.value!!.size)
+      }.Unit {
+        Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
+          Text("slice logs", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
+        }
+      }
+    }
+
     Box(Modifier.fillMaxSize().padding(pv)) {
-      Box(
-        modifier = Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_007)
-          .fillMaxWidth().height(height).padding(top = 5.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
-      ) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-          heightDrag.Unit {
-            Row(Modifier.fillMaxWidth().padding(bottom = 5.dp), horizontalArrangement = Arrangement.Center) {
-              Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
-            }
-          }
-          Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            showMoreUnit()
-            snapToBtnUnit()
-            closeBtnUnit()
-          }
-          if (showMoreObserved) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-              Box(Modifier.fillMaxWidth().height(5.dp).background(GREY))
+      if (isOpenObserved) {
+        Box(
+          modifier = Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_007)
+            .fillMaxWidth().height(heightObserved).padding(top = 5.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
+        ) {
+          Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            heightDrag.Unit {
+              Row(Modifier.fillMaxWidth().padding(bottom = 5.dp), horizontalArrangement = Arrangement.Center) {
+                Box(Modifier.clip(cornerShape).fillMaxWidth(.8f).height(10.dp).background(DARK_GREY_001))
+              }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-              showDebugUnit()
-              randomLogUnit()
+              showMoreUnit()
+              snapToBtnUnit()
+              closeBtnUnit()
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-              Text("logs: ${logsObserved.size}", color = BLACK)
-              clearLogsUnit()
+            if (showMoreObserved) {
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Box(Modifier.fillMaxWidth().height(5.dp).background(GREY))
+              }
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                showDebugUnit()
+                randomLogUnit()
+              }
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("logs: ${logsObserved.size}", color = BLACK)
+                sliceLogsUnit()
+                clearLogsUnit()
+              }
             }
-          }
-          Row(
-            Modifier.fillMaxWidth().verticalScroll(scrollState).border(3.dp, DARK_GREY_003, cornerShape)
-              .clip(cornerShape).background(DARK_GREEN).weight(1f, true).padding(10.dp),
-            verticalAlignment = Alignment.Bottom
-          ) {
-            Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.Bottom) {
-              for (log: Log in logsObserved) {
-                if (showDebugObserved || log.logLevel != LogLevel.DEBUG) {
-                  Text(
-                    "[${log.getFormattedTime()}] ${log.msg}",
-                    fontFamily = FontFamily.Monospace,
-                    color = log.getColor(),
-                    style = TextStyle(textIndent = TextIndent(0.sp, 20.sp))
-                  )
+            Row(
+              Modifier.fillMaxWidth().verticalScroll(scrollState).border(3.dp, DARK_GREY_003, cornerShape)
+                .clip(cornerShape).background(DARK_GREEN).weight(1f, true).padding(10.dp),
+              verticalAlignment = Alignment.Bottom
+            ) {
+              Column(Modifier.width(IntrinsicSize.Max), verticalArrangement = Arrangement.Bottom) {
+                for (log: Log in logsObserved) {
+                  if (showDebugObserved || log.logLevel != LogLevel.DEBUG) {
+                    Text(
+                      "[${log.getFormattedTime()}] ${log.msg}",
+                      fontFamily = FontFamily.Monospace,
+                      color = log.getColor(),
+                      style = TextStyle(textIndent = TextIndent(0.sp, 20.sp))
+                    )
+                  }
                 }
               }
+            }
+          }
+        }
+      } else {
+        Box(
+          modifier = Modifier.align(Alignment.BottomEnd).padding(10.dp)
+        ) {
+          PressElement { _: PointerInputChange -> isOpen.value = true }.Unit {
+            Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
+              Text("logs (${logs.value!!.size})", color = BLACK, modifier = Modifier.padding(10.dp), fontWeight = FontWeight.Bold)
             }
           }
         }
