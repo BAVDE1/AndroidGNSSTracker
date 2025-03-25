@@ -30,30 +30,30 @@ import kotlin.math.floor
 
 val Logger: LoggerSingleton = LoggerSingleton()
 
+const val OPEN_DEFAULT = false
+const val SHOW_MORE_DEFAULT = false
+const val SHOW_DEBUG_DEFAULT = true
+const val SNAP_TO_BTM_DEFAULT = true
+const val HEIGHT_DEFAULT = 400f
+
 enum class LogLevel {
   DEBUG, INFO, WARN, DANGER
 }
 
 class LoggerSingleton {
-  private val OPEN_DEFAULT = false
-  private val SHOW_MORE_DEFAULT = false
-  private val SHOW_DEBUG_DEFAULT = true
-  private val SNAP_TO_BTM_DEFAULT = true
-  private val HEIGHT_DEFAULT = 400.dp
-
   private var initialized: Boolean = false
   private var activity: MainActivity? = null
 
   // live values
-  private var isOpen: MutableLiveData<Boolean> = MutableLiveData(OPEN_DEFAULT)
+  private val isOpen: MutableLiveData<Boolean> = MutableLiveData(OPEN_DEFAULT)
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
-  private var height: MutableLiveData<Dp> = MutableLiveData(HEIGHT_DEFAULT)
+  private val height: MutableLiveData<Dp> = MutableLiveData(Dp(HEIGHT_DEFAULT))
   private val showMore: MutableLiveData<Boolean> = MutableLiveData(SHOW_MORE_DEFAULT)
   private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
   private val snapToBtm: MutableLiveData<Boolean> = MutableLiveData(SNAP_TO_BTM_DEFAULT)
 
   // events
-  var onVisibilityChanged: ((Boolean) -> Unit)? = null
+  val onVisibilityChanged: EventHandler = EventHandler()
 
   // interactable
   private val showMoreToggle =
@@ -88,7 +88,7 @@ class LoggerSingleton {
     )
   })
 
-  fun setupLogger(activity: MainActivity) {
+  fun initialise(activity: MainActivity) {
     if (initialized) return
     this.activity = activity
     initialized = true
@@ -122,7 +122,7 @@ class LoggerSingleton {
 
   fun toggleVisibility(value: Boolean) {
     isOpen.value = value
-    onVisibilityChanged?.let { it(isOpen.value!!) }
+    onVisibilityChanged.fireAll(isOpen.value!!)
   }
 
   @Composable
@@ -136,7 +136,7 @@ class LoggerSingleton {
     var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
     logs.observeForever { v: List<Log> -> logsObserved = v }
 
-    var heightObserved: Dp by remember { mutableStateOf(HEIGHT_DEFAULT) }
+    var heightObserved: Dp by remember { mutableStateOf(Dp(HEIGHT_DEFAULT)) }
     height.observeForever { v: Dp -> heightObserved = v }
 
     var showMoreObserved: Boolean by remember { mutableStateOf(SHOW_MORE_DEFAULT) }

@@ -1,35 +1,35 @@
 package com.example.androidtest001.classes
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import androidx.core.app.ActivityCompat
 import com.example.androidtest001.MainActivity
 
-/*
+/**
  Global Navigation Satellite System
  */
 class GnssHelper {
-  private var mainActivity: MainActivity? = null
+  private var activity: MainActivity? = null
   private var context: Context? = null
+  private var permHelper: PermissionHelper? = null
+
   private var lm: LocationManager? = null
   private var listener: GnssListener = GnssListener()
 
-  fun initialise(activity: MainActivity) {
-    mainActivity = activity
-    context = mainActivity!!.applicationContext
+  fun initialise(activity: MainActivity, permHelper: PermissionHelper) {
+    this.activity = activity
+    this.context = activity.applicationContext
+    this.permHelper = permHelper
     setupLocationService()
   }
 
   private fun setupLocationService() {
-    if (hasLocationPermission()) {
+    if (permHelper!!.arePermissionsGranted(arrayOf(ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_BACKGROUND_LOCATION))) {
       lm = context!!.getSystemService(Context.LOCATION_SERVICE) as LocationManager
       setupLocationUpdates()
-    } else requestLocationPermission()
+    }
   }
 
   private fun requestCurrentLocation() {
@@ -47,30 +47,32 @@ class GnssHelper {
     return lm!!.isLocationEnabled
   }
 
-  private fun hasLocationPermission(): Boolean {
-    val coarsePerms = ActivityCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_COARSE_LOCATION)
-    val finePerms = ActivityCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_FINE_LOCATION)
-    val bgPerms = ActivityCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-    return (finePerms == PackageManager.PERMISSION_GRANTED &&
-            coarsePerms == PackageManager.PERMISSION_GRANTED &&
-            bgPerms == PackageManager.PERMISSION_GRANTED)
-  }
+  // todo: move
+//  private fun hasLocationPermission(): Boolean {
+//    val coarsePerms = ActivityCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_COARSE_LOCATION)
+//    val finePerms = ActivityCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_FINE_LOCATION)
+//    val bgPerms = ActivityCompat.checkSelfPermission(context!!, Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+//    return (finePerms == PackageManager.PERMISSION_GRANTED &&
+//            coarsePerms == PackageManager.PERMISSION_GRANTED &&
+//            bgPerms == PackageManager.PERMISSION_GRANTED)
+//  }
 
-  private fun requestLocationPermission() {
-    mainActivity!!.requestPermissions(
-      arrayOf(
-        Manifest.permission.ACCESS_COARSE_LOCATION,
-        Manifest.permission.ACCESS_FINE_LOCATION,
-        Manifest.permission.ACCESS_BACKGROUND_LOCATION
-      ), { permsGranted: Map<String, Boolean> ->
-        requestLocationPermissionCallback(permsGranted)
-      }
-    )
-  }
+  // todo: move
+//  private fun requestLocationPermission() {
+//    PermissionHelper.requestPermissions(
+//      arrayOf(
+//        Manifest.permission.ACCESS_COARSE_LOCATION,
+//        Manifest.permission.ACCESS_FINE_LOCATION,
+//        Manifest.permission.ACCESS_BACKGROUND_LOCATION
+//      ), { permsGranted: Map<String, Boolean> ->
+//        requestLocationPermissionCallback(permsGranted)
+//      }
+//    )
+//  }
 
-  private fun requestLocationPermissionCallback(permsGranted: Map<String, Boolean>) {
-    println(permsGranted)
-  }
+//  private fun requestLocationPermissionCallback(permsGranted: Map<String, Boolean>) {
+//    println(permsGranted)
+//  }
 }
 
 class GnssListener : LocationListener {
