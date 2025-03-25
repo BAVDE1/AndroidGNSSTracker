@@ -122,7 +122,7 @@ class LoggerSingleton {
 
   fun toggleVisibility(value: Boolean) {
     isOpen.value = value
-    onVisibilityChanged.fireAll(isOpen.value!!)
+    onVisibilityChanged.fire(isOpen.value!!)
   }
 
   @Composable

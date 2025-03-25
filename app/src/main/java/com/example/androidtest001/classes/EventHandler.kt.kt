@@ -19,20 +19,20 @@ class EventHandler {
     allCallbacks.remove(id)
   }
 
-  fun fireAll() {
+  fun fire() {
     for (callback in allCallbacks) {
       callback.value(null)
     }
   }
 
-  fun fireAll(arg: Any) {
+  fun fire(arg: Any) {
     for (callback in allCallbacks) {
       callback.value(arg)
     }
   }
 
   /** takes a custom function to call for each callback. This allows multiple, custom parameters to be passed to each callback */
-  fun fireAll(call: ((Any?) -> Unit) -> Unit) {
+  fun fire(call: ((Any?) -> Unit) -> Unit) {
     for (callback in allCallbacks) {
       call(callback.value)
     }
