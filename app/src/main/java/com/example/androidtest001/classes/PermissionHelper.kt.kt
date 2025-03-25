@@ -2,6 +2,7 @@ package com.example.androidtest001.classes
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import com.example.androidtest001.MainActivity
@@ -21,33 +22,41 @@ class PermissionHelper {
   /** SINGLE */
   private var requestPermChecking: String = ""
   private var requestPermCallback: ((Boolean) -> Unit)? = null
-  private val requestPermLauncher = activity!!.registerForActivityResult(
-    ActivityResultContracts.RequestPermission()
-  ) { grantedResult: Boolean ->
-    permCache[requestPermChecking] = grantedResult
-    requestPermCallback?.let { it(grantedResult) }
-    requestPermCallback = null
-    permRequestLock = false
-  }
+  private var requestPermLauncher: ActivityResultLauncher<String>? = null
 
   /** MULTIPLE */
   private var requestPermsCallback: ((Map<String, Boolean>) -> Unit)? = null
-  private val requestPermsLauncher = activity!!.registerForActivityResult(
-    ActivityResultContracts.RequestMultiplePermissions()
-  ) { grantedResults: Map<String, Boolean> ->
-    for (result in grantedResults) {
-      permCache[result.key] = result.value
-    }
-    requestPermsCallback?.let { it(grantedResults) }
-    requestPermsCallback = null
-    permRequestLock = false
-  }
+  private var requestPermsLauncher: ActivityResultLauncher<Array<String>>? = null
 
   fun initialise(activity: MainActivity) {
     if (initialized) return
     this.activity = activity
     this.context = activity.applicationContext
+
+    setupLaunchers()
     initialized = true
+  }
+
+  private fun setupLaunchers() {
+    requestPermLauncher = activity!!.registerForActivityResult(
+      ActivityResultContracts.RequestPermission()
+    ) { grantedResult: Boolean ->
+      permCache[requestPermChecking] = grantedResult
+      requestPermCallback?.let { it(grantedResult) }
+      requestPermCallback = null
+      permRequestLock = false
+    }
+
+    requestPermsLauncher = activity!!.registerForActivityResult(
+      ActivityResultContracts.RequestMultiplePermissions()
+    ) { grantedResults: Map<String, Boolean> ->
+      for (result in grantedResults) {
+        permCache[result.key] = result.value
+      }
+      requestPermsCallback?.let { it(grantedResults) }
+      requestPermsCallback = null
+      permRequestLock = false
+    }
   }
 
   fun isPermissionGranted(perm: String): Boolean {
@@ -69,13 +78,13 @@ class PermissionHelper {
     permRequestLock = true
     requestPermChecking = perm
     requestPermCallback = callback
-    requestPermLauncher.launch(perm)
+    requestPermLauncher!!.launch(perm)
   }
 
   fun requestPermissions(perms: Array<String>, callback: ((Map<String, Boolean>) -> Unit)?) {
     if (permRequestLock) return
     permRequestLock = true
     requestPermsCallback = callback
-    requestPermsLauncher.launch(perms)
+    requestPermsLauncher!!.launch(perms)
   }
 }

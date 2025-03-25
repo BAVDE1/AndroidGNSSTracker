@@ -35,6 +35,7 @@ const val SHOW_MORE_DEFAULT = false
 const val SHOW_DEBUG_DEFAULT = true
 const val SNAP_TO_BTM_DEFAULT = true
 const val HEIGHT_DEFAULT = 400f
+const val MAX_VISIBLE_LOGS = 200
 
 enum class LogLevel {
   DEBUG, INFO, WARN, DANGER
@@ -47,6 +48,7 @@ class LoggerSingleton {
   // live values
   private val isOpen: MutableLiveData<Boolean> = MutableLiveData(OPEN_DEFAULT)
   private val logs: MutableLiveData<List<Log>> = MutableLiveData(listOf())
+  private val logOverflow: MutableLiveData<Int> = MutableLiveData(0)
   private val height: MutableLiveData<Dp> = MutableLiveData(Dp(HEIGHT_DEFAULT))
   private val showMore: MutableLiveData<Boolean> = MutableLiveData(SHOW_MORE_DEFAULT)
   private val showDebug: MutableLiveData<Boolean> = MutableLiveData(SHOW_DEBUG_DEFAULT)
@@ -101,7 +103,14 @@ class LoggerSingleton {
 
   fun pushLog(level: LogLevel, msg: String) {
     val newLog = Log(logLevel = level, msg)
-    logs.value = listOf(*logs.value!!.toTypedArray(), newLog)
+    var newList: MutableList<Log> = mutableListOf(*logs.value!!.toTypedArray(), newLog)
+    val diff = newList.size - MAX_VISIBLE_LOGS
+    if (diff > 0) {
+      logOverflow.value = logOverflow.value!! + diff
+      newList = newList.subList(diff, diff + MAX_VISIBLE_LOGS)
+      newList[0] = Log(LogLevel.DEBUG, "+ ${logOverflow.value} more")
+    }
+    logs.value = newList
   }
 
   fun debug(msg: Any) {
@@ -135,6 +144,9 @@ class LoggerSingleton {
 
     var logsObserved: List<Log> by remember { mutableStateOf(listOf()) }
     logs.observeForever { v: List<Log> -> logsObserved = v }
+
+    var logOverflowObserved: Int by remember { mutableStateOf(0) }
+    logOverflow.observeForever { v: Int -> logOverflowObserved = v }
 
     var heightObserved: Dp by remember { mutableStateOf(Dp(HEIGHT_DEFAULT)) }
     height.observeForever { v: Dp -> heightObserved = v }
@@ -208,7 +220,10 @@ class LoggerSingleton {
     }
 
     val clearLogsUnit: @Composable () -> Unit = {
-      PressElement { logs.value = listOf() }.Unit {
+      PressElement {
+        logs.value = listOf()
+        logOverflow.value = 0
+      }.Unit {
         Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
           Text("clear logs", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
         }
@@ -218,6 +233,7 @@ class LoggerSingleton {
     val sliceLogsUnit: @Composable () -> Unit = {
       PressElement {
         logs.value = logs.value!!.subList(floor(logs.value!!.size * .5).toInt(), logs.value!!.size)
+        logOverflow.value = 0
       }.Unit {
         Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
           Text("slice logs", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
@@ -251,7 +267,7 @@ class LoggerSingleton {
                 randomLogUnit()
               }
               Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("logs: ${logsObserved.size}", color = BLACK)
+                Text("logs: ${logsObserved.size} (+${logOverflowObserved})", color = BLACK)
                 sliceLogsUnit()
                 clearLogsUnit()
               }
@@ -283,7 +299,7 @@ class LoggerSingleton {
           PressElement { toggleVisibility(true) }.Unit {
             Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
               Text(
-                "logs (${logs.value!!.size})",
+                "logs (${logsObserved.size + logOverflowObserved})",
                 color = BLACK,
                 modifier = Modifier.padding(10.dp),
                 fontWeight = FontWeight.Bold
