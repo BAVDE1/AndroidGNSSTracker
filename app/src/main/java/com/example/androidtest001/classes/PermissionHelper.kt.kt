@@ -2,9 +2,12 @@ package com.example.androidtest001.classes
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.pm.PermissionInfo
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.*
@@ -23,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import com.example.androidtest001.MainActivity
 import com.example.androidtest001.ui.theme.*
+import java.security.Permissions
 
 const val ACCESS_INTERNET = Manifest.permission.INTERNET
 const val ACCESS_COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION
@@ -127,7 +131,9 @@ fun PermissionPage(activity: MainActivity, innerPadding: PaddingValues) {
           Box(Modifier.fillMaxWidth().height(5.dp).background(DARK_GREY_003))
         }
         Row(Modifier.clip(cornerShape).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-          PressElement { }.Unit {
+          PressElement {
+            activity.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+          }.Unit {
             Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
               Text("change permissions", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
             }
