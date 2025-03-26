@@ -4,7 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +23,7 @@ import com.example.androidtest001.units.OptionsMenuUnit
 import java.util.logging.Logger
 
 const val OPTIONS_OPEN_DEFAULT = false
+const val PERMISSION_OPEN_DEFAULT = true
 
 enum class Menu {
   LOGGING, OPTIONS, PERMISSIONS
@@ -28,12 +31,12 @@ enum class Menu {
 
 class MainActivity : ComponentActivity() {
   private val isOptionsOpen: MutableLiveData<Boolean> = MutableLiveData(OPTIONS_OPEN_DEFAULT)
-  private val isPermissionsOpen: MutableLiveData<Boolean> = MutableLiveData(false)
+  private val isPermissionsOpen: MutableLiveData<Boolean> = MutableLiveData(PERMISSION_OPEN_DEFAULT)
 
 //  private val menuLookups: HashMap<Menu, MutableLiveData<Boolean>> = hashMapOf(pairs = Pair<Menu, Logger.>)
 
-  private val permHelper: PermissionHelper = PermissionHelper()
-  private val gns: GnssHelper = GnssHelper()
+  val permHelper: PermissionHelper = PermissionHelper()
+  val gns: GnssHelper = GnssHelper()
 
   private fun initialise() {
     Logger.initialise(this)
@@ -55,6 +58,7 @@ class MainActivity : ComponentActivity() {
   }
 
   fun openPermissionsMenu() {
+    isOptionsOpen.value = false
     isPermissionsOpen.value = true
   }
 
@@ -67,17 +71,18 @@ class MainActivity : ComponentActivity() {
     initialise()
 
     setContent {
-      var isPermissionsOpenObserved: Boolean by remember { mutableStateOf(false) }
+      var isPermissionsOpenObserved: Boolean by remember { mutableStateOf(PERMISSION_OPEN_DEFAULT) }
       isPermissionsOpen.observeForever { v: Boolean -> isPermissionsOpenObserved = v }
 
       AndroidTest001Theme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
           OptionsMenuUnit(this, innerPadding, isOptionsOpen, OPTIONS_OPEN_DEFAULT)
-          Logger.Unit(innerPadding)
 
           if (isPermissionsOpenObserved) {
             PermissionPage(this, innerPadding)
           }
+
+          Logger.Unit(innerPadding)
         }
       }
     }

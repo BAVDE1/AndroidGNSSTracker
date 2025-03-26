@@ -8,6 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerEvent
@@ -243,8 +245,10 @@ class LoggerSingleton {
 
     Box(Modifier.fillMaxSize().padding(pv)) {
       if (isOpenObserved) {
-        Box(
-          modifier = Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_007)
+        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(heightObserved + 2.dp)) {
+          Box(Modifier.fillMaxWidth().height(2.dp).background(DARK_GREY_001))
+        }
+        Box(Modifier.align(Alignment.BottomStart).background(LIGHT_GREY_007)
             .fillMaxWidth().height(heightObserved).padding(top = 5.dp, bottom = 10.dp, start = 10.dp, end = 10.dp)
         ) {
           Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(5.dp)) {

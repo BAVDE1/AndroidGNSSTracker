@@ -49,7 +49,7 @@ fun OptionsMenuUnit(
                   Modifier.clip(cornerShape).fillMaxWidth().background(LIGHT_GREY_009).padding(5.dp),
                   horizontalArrangement = Arrangement.Center
                 ) {
-                  Text("permissions (N/I)", color = BLACK)
+                  Text("permissions", color = BLACK)
                 }
               }
               PressElement { }.Unit {

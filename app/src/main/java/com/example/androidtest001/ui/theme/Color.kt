@@ -24,5 +24,6 @@ val WHITE = Color(1f, 1f, 1f, 1f)
 
 val YELLOW = Color(1f, .8f, 0f, 1f)
 val ORANGE = Color(1f, .5f, 0f, 1f)
-val RED = Color(1f, .2f, 0f, 1f)
+val RED = Color(.9f, .2f, 0f, 1f)
+val GREEN = Color(.2f, .6f, .2f, 1f)
 val DARK_GREEN = Color(0f, .08f, .02f, 1f)
