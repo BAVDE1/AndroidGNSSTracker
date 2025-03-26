@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.PermissionInfo
+import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -112,6 +113,11 @@ fun PermissionPage(activity: MainActivity, innerPadding: PaddingValues) {
 
   var permsListObserved: ArrayList<String> by remember { mutableStateOf(PERMS_LIST) }
 
+  fun refreshList() {
+    permsListObserved = arrayListOf()
+    Handler(Looper.getMainLooper()).postDelayed({ permsListObserved = PERMS_LIST }, 50)
+  }
+
   Box(Modifier.fillMaxSize().padding(innerPadding).background(LIGHT_GREY_007)) {
     Box(Modifier.fillMaxSize().padding(10.dp, 10.dp, 10.dp, 60.dp)) {
       Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.End) {
@@ -132,16 +138,13 @@ fun PermissionPage(activity: MainActivity, innerPadding: PaddingValues) {
         }
         Row(Modifier.clip(cornerShape).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
           PressElement {
-            activity.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            activity.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + activity.packageName)))
           }.Unit {
             Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
               Text("change permissions", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
             }
           }
-          PressElement {
-            permsListObserved = arrayListOf()
-            Handler(Looper.getMainLooper()).postDelayed({ permsListObserved = PERMS_LIST }, 50)
-          }.Unit {
+          PressElement { refreshList() }.Unit {
             Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
               Text("refresh", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
             }
@@ -166,6 +169,15 @@ fun PermissionPage(activity: MainActivity, innerPadding: PaddingValues) {
                       color = if (granted) GREEN else RED,
                       fontWeight = FontWeight.Bold
                     )
+                    if (!granted) {
+                      PressElement {
+                        activity.permHelper.requestPermission(perm) { refreshList() }
+                      }.Unit {
+                        Row(Modifier.clip(cornerShape).background(LIGHT_GREY_007).border(3.dp, DARK_GREY_003, cornerShape)) {
+                          Text("request", color = BLACK, modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp))
+                        }
+                      }
+                    }
                   }
                 }
               }
