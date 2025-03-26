@@ -12,14 +12,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.MutableLiveData
+import com.example.androidtest001.MainActivity
 import com.example.androidtest001.classes.PressElement
-import com.example.androidtest001.ui.theme.*
+import com.example.androidtest001.ui.theme.BLACK
+import com.example.androidtest001.ui.theme.DARK_GREY_003
+import com.example.androidtest001.ui.theme.LIGHT_GREY_007
+import com.example.androidtest001.ui.theme.LIGHT_GREY_009
 
 @Composable
 fun OptionsMenuUnit(
+  activity: MainActivity,
   innerPadding: PaddingValues,
   isOptionsOpen: MutableLiveData<Boolean>,
   optionsOpenDefault: Boolean
@@ -40,7 +44,7 @@ fun OptionsMenuUnit(
               .border(3.dp, DARK_GREY_003, cornerShape)
           ) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-              PressElement { }.Unit {
+              PressElement { activity.openPermissionsMenu() }.Unit {
                 Row(
                   Modifier.clip(cornerShape).fillMaxWidth().background(LIGHT_GREY_009).padding(5.dp),
                   horizontalArrangement = Arrangement.Center
@@ -53,7 +57,7 @@ fun OptionsMenuUnit(
                   Modifier.clip(cornerShape).fillMaxWidth().background(LIGHT_GREY_009).padding(5.dp),
                   horizontalArrangement = Arrangement.Center
                 ) {
-                  Text("options (N/I)", color = BLACK)
+                  Text("settings (N/I)", color = BLACK)
                 }
               }
             }
